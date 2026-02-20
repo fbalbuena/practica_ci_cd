@@ -52,27 +52,42 @@ def parse_args():
 
 
 def load_raw_data(input_dir: Path):
-    """Load train and (optionally) test CSV files from input_dir."""
-    train_path = input_dir / "titanic_train.csv"
-    test_path = input_dir / "titanic_test.csv"
+    """Load the primary CSV from input_dir.
 
-    if not train_path.exists():
+    Looks for 'titanic_train.csv' first; if not found, takes the first
+    CSV file in the directory (handles arbitrary filenames from S3).
+    A second CSV (titanic_test.csv or the second file found) is used as
+    the test set when available.
+    """
+    csv_files = sorted(input_dir.glob("*.csv"))
+
+    if not csv_files:
         raise FileNotFoundError(
-            f"Training file not found at {train_path}. "
+            f"No CSV files found in {input_dir}. "
             "Make sure to mount the raw data to the input channel."
         )
+
+    # Prefer explicit names, fall back to first file found
+    train_path = input_dir / "titanic_train.csv"
+    if not train_path.exists():
+        train_path = csv_files[0]
+        log.info("titanic_train.csv not found — using %s as training data.", train_path.name)
 
     log.info("Loading training data from %s", train_path)
     train_df = pd.read_csv(train_path)
     log.info("  → %d rows, %d columns", *train_df.shape)
 
     test_df = None
+    test_path = input_dir / "titanic_test.csv"
+    # Use second file as test set if explicit name not found
+    if not test_path.exists() and len(csv_files) > 1:
+        test_path = csv_files[1]
     if test_path.exists():
         log.info("Loading test data from %s", test_path)
         test_df = pd.read_csv(test_path)
         log.info("  → %d rows, %d columns", *test_df.shape)
     else:
-        log.warning("Test file not found at %s — skipping test set.", test_path)
+        log.warning("No test CSV found in %s — skipping test set.", input_dir)
 
     return train_df, test_df
 
