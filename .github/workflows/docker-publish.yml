@@ -35,10 +35,23 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Check if ECR repo exists
+        id: check-repo
+        run: |
+          if aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Repository already exists, skipping Terraform."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Repository does not exist, proceeding to Terraform."
+          fi
+
       - name: Setup Terraform
+        if: steps.check-repo.outputs.exists == 'false'
         uses: hashicorp/setup-terraform@v3
 
       - name: Initialize and Apply Terraform
+        if: steps.check-repo.outputs.exists == 'false'
         working-directory: terraform
         run: |
           terraform init
