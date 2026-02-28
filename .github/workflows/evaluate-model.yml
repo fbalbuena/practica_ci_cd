@@ -58,16 +58,19 @@ jobs:
         MODEL_FILE="${{ github.event.inputs.model_filename || 'titanic_model_random_forest.pkl' }}"
         python src/evaluate.py --model $MODEL_FILE --use-test
         
-        echo "Verifying minimum accuracy..."
-        ACCURACY=$(python -c "import json; print(json.load(open('reports/evaluation_results.json'))['metrics']['accuracy'])")
-        echo "Accuracy: $ACCURACY"
-        
-        if (( $(echo "$ACCURACY < 0.6" | bc -l) )); then
-          echo "::error::Accuracy ($ACCURACY) is below the required threshold of 0.6"
-          exit 1
-        fi
-
-        echo "Accuracy check passed!"
+        python -c "
+        import json, sys
+        with open('reports/evaluation_results.json') as f:
+            data = json.load(f)
+        acc = data['metrics']['accuracy']
+        print(f'Actual Accuracy: {acc:.4f}')
+        print(f'Required Threshold: 0.6000')
+        if acc < 0.6:
+            print(f'::error::Accuracy ({acc:.4f}) is below the required threshold of 0.6')
+            sys.exit(1)
+        else:
+            print('Accuracy check passed!')
+        "
     
     - name: Upload evaluation results
       uses: actions/upload-artifact@v4
