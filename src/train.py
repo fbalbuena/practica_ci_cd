@@ -135,7 +135,9 @@ if __name__ == '__main__':
     parser.add_argument('--cv-folds', type=int, default=5,
                         help='Number of cross-validation folds')
     
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        print(f"Ignoring unknown arguments: {unknown}")
     
     train_model(
         model_type=args.model,
