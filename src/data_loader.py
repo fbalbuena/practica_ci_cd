@@ -32,17 +32,26 @@ def load_titanic_data(train_path=None, test_path=None):
     """
     raw_data_path, _ = get_data_paths()
     
-    # Default paths if not provided
-    if train_path is None:
-        train_path = raw_data_path / 'train.csv'
-    if test_path is None:
-        test_path = raw_data_path / 'test.csv'
+    # Comprobar si estamos corriendo en AWS SageMaker Training Job
+    sagemaker_train_path = Path("/opt/ml/input/data/train")
+    if sagemaker_train_path.exists():
+        print(f"Detectado entorno SageMaker, leyendo datos de {sagemaker_train_path}")
+        if train_path is None:
+            train_path = sagemaker_train_path / 'train.csv'
+        if test_path is None:
+            test_path = sagemaker_train_path / 'test.csv'
+    else:
+        # Default paths if not provided
+        if train_path is None:
+            train_path = raw_data_path / 'train.csv'
+        if test_path is None:
+            test_path = raw_data_path / 'test.csv'
     
     # Check if files exist
     if not os.path.exists(train_path):
         raise FileNotFoundError(
             f"Training data not found at {train_path}. "
-            "Please run scripts/download_data.py first."
+            "Please run scripts/download_data.py first or ensure SageMaker injected the data correctly."
         )
     
     # Load data

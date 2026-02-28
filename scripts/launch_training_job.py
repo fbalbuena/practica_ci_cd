@@ -70,7 +70,7 @@ def launch_training_job(args):
         RoleArn=args.role,
         InputDataConfig=[
             {
-                "ChannelName": "training",
+                "ChannelName": "train",
                 "DataSource": {
                     "S3DataSource": {
                         "S3DataType": "S3Prefix",
