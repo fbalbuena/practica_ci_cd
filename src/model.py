@@ -1,5 +1,5 @@
 """
-Model definition for Titanic survival prediction1a.
+Model definition for Titanic survival prediction.
 """
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
