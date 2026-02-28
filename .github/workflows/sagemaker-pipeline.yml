@@ -9,10 +9,10 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: practica-ci-cd
-  S3_INPUT: s3://practica.mlops.2026/ejemplo.studio/
-  S3_OUTPUT: s3://practica.mlops.2026/ejemplo.studio/processed/
-  SAGEMAKER_ROLE_ARN: arn:aws:iam::421041021233:role/sagemaker-execution-practica-ci-cd
+  ECR_REPOSITORY: practica-ci-cd-rodolfo
+  S3_INPUT: s3://practica-bucket-tf-rodo/ejemplo.studio/
+  S3_OUTPUT: s3://practica-bucket-tf-rodo/ejemplo.studio/processed/
+  SAGEMAKER_ROLE_ARN: arn:aws:iam::356302822539:role/sagemaker-execution-practica-ci-cd-rodolfo
 
 jobs:
   run-processing-job:
@@ -54,14 +54,22 @@ jobs:
             --output-s3 ${{ env.S3_OUTPUT }} \
             --instance-type ml.t3.medium
 
+      - name: Launch SageMaker Training Job 
+        id: training
+        run: |
+          python scripts/launch_training_job.py \
+            --image ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:train-latest \
+            --role ${{ env.SAGEMAKER_ROLE_ARN }} \
+            --input-s3 ${{ env.S3_OUTPUT }} \
+            --output-s3 s3://${{ secrets.S3_BUCKET_NAME }}/models/ \
+            --instance-type ml.m5.large
+
       - name: Create summary
         if: always()
         run: |
-          echo "## SageMaker Processing Job 🔬" >> $GITHUB_STEP_SUMMARY
+          echo "## SageMaker Pipeline 🔬" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| Image | \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:processing-latest\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Input S3  | \`${{ env.S3_INPUT }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Output S3 | \`${{ env.S3_OUTPUT }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Instance  | \`ml.t3.medium\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Image | Instance |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Processing | \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:processing-latest\` | \`ml.t3.medium\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Training | \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:train-latest\` | \`ml.m5.large\` |" >> $GITHUB_STEP_SUMMARY
