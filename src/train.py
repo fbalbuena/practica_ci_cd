@@ -39,13 +39,30 @@ def train_model(model_type='random_forest', val_split=0.2, cv_folds=5):
     if test_df is not None:
         print(f"   ✓ Loaded {len(test_df)} test samples")
     
-    # Preprocess data
-    print("\n2. Preprocessing data...")
-    processed = preprocess_data(train_df, test_df, val_split=val_split)
-    X_train = processed['X_train']
-    y_train = processed['y_train']
-    X_val = processed['X_val']
-    y_val = processed['y_val']
+    # Preprocess data (Assume already preprocessed by SageMaker Processing if 'Name' is missing)
+    print("\n2. Preparing data for model...")
+    if 'Name' in train_df.columns:
+        # Local execution with raw data
+        processed = preprocess_data(train_df, test_df, val_split=val_split)
+        X_train = processed['X_train']
+        y_train = processed['y_train']
+        X_val = processed['X_val']
+        y_val = processed['y_val']
+    else:
+        # SageMaker Execution with preprocessed data
+        # Survived is typically the first column in the preprocessed output
+        y_train = train_df['Survived'] if 'Survived' in train_df.columns else train_df.iloc[:, 0]
+        X_train = train_df.drop('Survived', axis=1) if 'Survived' in train_df.columns else train_df.iloc[:, 1:]
+        
+        # We don't have a split from previous outputs for validation in a single train.csv, 
+        # so we split from X_train if requested.
+        if val_split > 0:
+            from sklearn.model_selection import train_test_split
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_train, y_train, test_size=val_split, random_state=42
+            )
+        else:
+            X_val, y_val = None, None
     
     print(f"   ✓ Training set: {X_train.shape}")
     if X_val is not None:
