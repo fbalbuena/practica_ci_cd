@@ -13,7 +13,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: practica-ci-cd
+  ECR_REPOSITORY: practica-ci-cd-rodolfo
 
 jobs:
   build-and-push:
@@ -35,6 +35,17 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        if: github.event_name != 'pull_request'
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize and Apply Terraform
+        if: github.event_name != 'pull_request'
+        working-directory: terraform
+        run: |
+          terraform init
+          terraform apply -auto-approve -var="ecr_repo_name=${{ env.ECR_REPOSITORY }}"
 
       - name: Login to Amazon ECR
         if: github.event_name != 'pull_request'
