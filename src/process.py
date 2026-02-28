@@ -1,12 +1,15 @@
 """
 SageMaker Processing Job entrypoint.
 
+# pylint: disable=wrong-import-position
+
 Reads raw Titanic CSV from /opt/ml/processing/input/raw/
 Saves processed train/validation/test CSV files to /opt/ml/processing/output/
 
 SageMaker will automatically sync the output directory to the S3 path
 configured in the ProcessingOutput of the ProcessingJob.
 """
+
 import sys
 import argparse
 import logging
@@ -17,6 +20,7 @@ import pandas as pd
 # Add project root to path so src.preprocessing is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# pylint: disable=wrong-import-position
 from src.preprocessing import preprocess_data  # noqa: E402
 
 # ─── SageMaker standard paths ────────────────────────────────────────────────
@@ -31,22 +35,31 @@ log = logging.getLogger(__name__)
 
 
 def parse_args():
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="SageMaker Processing Job - Titanic")
     parser.add_argument(
-        "--val-split", type=float, default=0.2,
-        help="Fraction of training data to use as validation set (default: 0.2)"
+        "--val-split",
+        type=float,
+        default=0.2,
+        help="Fraction of training data to use as validation set (default: 0.2)",
     )
     parser.add_argument(
-        "--random-state", type=int, default=42,
-        help="Random seed for reproducibility (default: 42)"
+        "--random-state",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility (default: 42)",
     )
     parser.add_argument(
-        "--input-dir", type=str, default=str(INPUT_DIR),
-        help="Directory with raw CSV files (default: /opt/ml/processing/input/raw)"
+        "--input-dir",
+        type=str,
+        default=str(INPUT_DIR),
+        help="Directory with raw CSV files (default: /opt/ml/processing/input/raw)",
     )
     parser.add_argument(
-        "--output-dir", type=str, default=str(OUTPUT_DIR),
-        help="Directory to write processed CSV files (default: /opt/ml/processing/output)"
+        "--output-dir",
+        type=str,
+        default=str(OUTPUT_DIR),
+        help="Directory to write processed CSV files (default: /opt/ml/processing/output)",
     )
     return parser.parse_args()
 
@@ -71,7 +84,9 @@ def load_raw_data(input_dir: Path):
     train_path = input_dir / "titanic_train.csv"
     if not train_path.exists():
         train_path = csv_files[0]
-        log.info("titanic_train.csv not found — using %s as training data.", train_path.name)
+        log.info(
+            "titanic_train.csv not found — using %s as training data.", train_path.name
+        )
 
     log.info("Loading training data from %s", train_path)
     train_df = pd.read_csv(train_path)
@@ -113,10 +128,13 @@ def save_processed_data(processed: dict, output_dir: Path):
 
         out_path = output_dir / f"{split_name}.csv"
         df.to_csv(out_path, index=False)
-        log.info("Saved %s split → %s  (%d rows, %d cols)", split_name, out_path, *df.shape)
+        log.info(
+            "Saved %s split → %s  (%d rows, %d cols)", split_name, out_path, *df.shape
+        )
 
 
 def main():
+    """Main execution function for the processing job."""
     args = parse_args()
     input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)

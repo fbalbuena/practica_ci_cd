@@ -15,3 +15,9 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "s3_bucket_name" {
+  description = "Nombre del bucket S3 para almacenar datos y resultados"
+  type        = string
+  default     = "practica-ci-cd-s3-bucket"
+}

@@ -57,14 +57,12 @@ docs/_build/
 .gemini/
 
 # Data (will be downloaded in container)
-# Uncomment if you want to exclude data from image
-# data/raw/*
-# data/processed/*
+data/raw/*
+data/processed/*
 
 # Models (will be trained in container)
-# Uncomment if you want to exclude models from image
-# models/*.pkl
-# models/*.joblib
+models/*.pkl
+models/*.joblib
 
 # Reports
 reports/*.png

@@ -76,9 +76,9 @@ resource "aws_iam_user_policy" "ecr_push" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "AllowECRAuth"
-        Effect = "Allow"
-        Action = ["ecr:GetAuthorizationToken"]
+        Sid      = "AllowECRAuth"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
         Resource = "*"
       },
       {
@@ -101,4 +101,28 @@ resource "aws_iam_user_policy" "ecr_push" {
 
 resource "aws_iam_access_key" "github_actions" {
   user = aws_iam_user.github_actions.name
+}
+
+# ─────────────────────────────────────────────
+# S3 Bucket para datos y resultados
+# ─────────────────────────────────────────────
+
+resource "aws_s3_bucket" "ml_data_bucket" {
+  bucket        = var.s3_bucket_name
+  force_destroy = true # Para propósito de pruebas y no dejar huérfanos
+
+  tags = {
+    Project     = "practica-ci-cd"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "ml_data_bucket_access" {
+  bucket = aws_s3_bucket.ml_data_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }

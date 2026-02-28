@@ -13,6 +13,10 @@ Proyecto completo de Machine Learning para predecir la supervivencia de pasajero
 > [!NOTE]
 > **🎯 Proyecto académico de práctica**: Este repositorio fue creado como ejercicio práctico para aprender CI/CD, testing y mejores prácticas en proyectos de Machine Learning.
 
+## 👥 Autores
+1. **Fa Balbuena** - fa@example.com (Favor de reemplazar con correo real)
+2. **[Nombre de Compañero/a]** - [Correo de Compañero/a]
+
 ## 📑 Tabla de Contenidos
 
 - [Características](#-características)
@@ -58,23 +62,37 @@ Proyecto completo de Machine Learning para predecir la supervivencia de pasajero
 
 ## 🏗️ Arquitectura del Pipeline
 
-```
-Push a main
-    │
-    ├─► CI (ci.yml)                    → flake8 + pytest (Python 3.9, 3.10, 3.11)
-    │
-    └─► docker-publish.yml
-            │  Construye imagen processing  ──► ECR :processing-latest
-            │  Construye imagen train       ──► ECR :train-latest
-            │
-            └─► sagemaker-pipeline.yml  (workflow_run trigger)
-                    │
-                    ├─ Lee datos crudos de S3
-                    ├─ Lanza SageMaker Processing Job
-                    │      (usa imagen processing de ECR)
-                    └─ Guarda train/val/test.csv  ──► S3
-
-                    🚧 Training Job  ← Ejercicio para alumnos
+```mermaid
+flowchart TD
+    dev([Desarrollador]) -->|Push/PR a main| github([GitHub Repository])
+    
+    subgraph GitHub Actions
+        ci[CI Pipeline: Linting & Tests]
+        cd[CD Pipeline: Build & Deploy]
+    end
+    
+    subgraph AWS Terraformed
+        s3[(S3 Bucket)]
+        ecr[ECR Repository]
+        sm_proc[SageMaker Processing]
+        sm_train[SageMaker Training]
+    end
+    
+    github -->|Trigger| ci
+    ci -->|Descarga Validation Data| s3
+    ci -->|Valida Accuracy > 0.6| ci_pass{Pasa?}
+    
+    ci_pass -->|Sí| cd
+    
+    cd -->|Build Processing/Train Images| ecr
+    cd -->|Trigger| sm_proc
+    
+    sm_proc -->|Lee Raw Data| s3
+    sm_proc -->|Sube Processed| s3
+    sm_proc -->|Trigger| sm_train
+    
+    sm_train -->|Lee Processed| s3
+    sm_train -->|Guarda Modelo| s3
 ```
 
 ## ☁️ Infraestructura con Terraform
@@ -138,11 +156,11 @@ Ver [docs/DOCKER.md](docs/DOCKER.md) para documentación completa de Docker.
 
 #### Prerequisitos
 
-- Python 3.9 o superior
+- Python 3.10
 - pip
 - Git
 
-#### Instalación en 3 Pasos
+#### Instalación y Ejecución del Código
 
 ```bash
 # 1. Clonar el repositorio
@@ -150,13 +168,18 @@ git clone https://github.com/ivhuco/practica_ci_cd.git
 cd practica_ci_cd
 
 # 2. Crear entorno virtual e instalar dependencias
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 3. Ejecutar pipeline completo
-python scripts/download_data.py  # Descargar datos
-python scripts/run_pipeline.py   # Entrenar y evaluar
+# 3. Descargar datos de prueba
+python3 scripts/download_data.py
+
+# 4. Entrenar modelo
+python3 src/train.py --model random_forest
+
+# 5. Evaluar modelo (Valida script > 0.6 Accuracy)
+python3 src/evaluate.py --use-test
 ```
 
 ### Verificación

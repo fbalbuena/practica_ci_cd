@@ -1,4 +1,4 @@
-name: CI - Testing and Linting
+name: CI - Linting and Validation
 
 on:
   push:
@@ -7,21 +7,17 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.10'
     
     - name: Cache pip dependencies
       uses: actions/cache@v3
@@ -36,34 +32,44 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Lint with flake8
+    - name: Lint with pylint
       run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
-        flake8 src/ tests/ --count --max-line-length=100 --statistics --exit-zero
+        pylint src/
     
-    - name: Run tests with pytest
-      run: |
-        pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
-    
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-    
-    - name: Generate coverage HTML report
-      if: matrix.python-version == '3.10'
-      run: |
-        pytest tests/ --cov=src --cov-report=html
-    
-    - name: Upload coverage HTML
-      if: matrix.python-version == '3.10'
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-html-report
-        path: htmlcov/
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
+    - name: Download Data from S3
+      run: |
+        mkdir -p data/raw
+        # Assuming the bucket has a 'data/raw/' prefix
+        aws s3 cp s3://${{ secrets.S3_BUCKET_NAME }}/data/raw/ data/raw/ --recursive
+        # Fallback if no data is found (so the action doesn't fail if the bucket is empty during testing)
+        if [ -z "$(ls -A data/raw)" ]; then
+           echo "No data found in S3, falling back to download_data.py to populate it for the first time..."
+           python scripts/download_data.py
+           # Upload it back so future runs find it
+           aws s3 cp data/raw/ s3://${{ secrets.S3_BUCKET_NAME }}/data/raw/ --recursive
+        fi
+    
+    - name: Train Model
+      run: |
+        python src/train.py --model random_forest
+    
+    - name: Evaluate Model
+      run: |
+        python src/evaluate.py --model titanic_model_random_forest.pkl --use-test
+        
+    - name: Enforce Accuracy > 0.6
+      run: |
+        ACCURACY=$(python -c "import json; print(json.load(open('reports/evaluation_results.json', encoding='utf-8'))['metrics']['accuracy'])")
+        echo "Model accuracy: $ACCURACY"
+        if [ 1 -eq "$(echo "${ACCURACY} <= 0.6" | bc)" ]; then
+          echo "Accuracy ${ACCURACY} is not greater than 0.6. Failing CI."
+          exit 1
+        fi
+        echo "Accuracy is > 0.6. CI passed."

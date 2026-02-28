@@ -1,0 +1,12 @@
+[FORMAT]
+max-line-length=120
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,X,y,X_train,y_train,X_test,y_test,X_val,y_val,df,X_eval,y_eval,y_pred,y_proba,f,cm,fp,args,train_df,test_df
+
+[DESIGN]
+max-args=10
+max-locals=30
+max-statements=70
+max-attributes=10
+
