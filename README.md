@@ -517,6 +517,11 @@ El pipeline actual procesa los datos con SageMaker y los deja listos en S3. El s
 - Script de referencia: [`scripts/launch_processing_job.py`](scripts/launch_processing_job.py)
 - Workflow de referencia: [`.github/workflows/sagemaker-pipeline.yml`](.github/workflows/sagemaker-pipeline.yml)
 
+## 🏗️ Infraestructura
+Se agrega el diagrama de la infraestructura planteada para la solución de este proyecto.
+
+![Diagrama de Infraestructura AWS](docs/infra.jpeg)
+
 ## 🤝 Contribuir
 
 ¡Las contribuciones son bienvenidas! Por favor:
