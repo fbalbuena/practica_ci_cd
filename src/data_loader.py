@@ -1,5 +1,5 @@
 """
-Data loader module for Titanic dataset1.
+Data loader module for Titanic dataset.
 """
 import os
 import pandas as pd
