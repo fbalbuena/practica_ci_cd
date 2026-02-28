@@ -1,5 +1,5 @@
 """
-Training script for Titanic survival prediction model.
+Training script for Titanic survival prediction model|.
 """
 import sys
 import json
