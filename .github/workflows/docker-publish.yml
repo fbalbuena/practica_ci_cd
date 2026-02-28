@@ -9,11 +9,10 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: practica-ci-cd
+  ECR_REPOSITORY: practica-ci-cd-rodolfo
 
 jobs:
   build-and-push:
@@ -29,15 +28,36 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS Credentials
-        if: github.event_name != 'pull_request'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Check if ECR repo exists
+        id: check-repo
+        run: |
+          if aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Repository already exists, skipping Terraform."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Repository does not exist, proceeding to Terraform."
+          fi
+
+      - name: Setup Terraform
+        if: steps.check-repo.outputs.exists == 'false'
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize and Apply Terraform
+        if: steps.check-repo.outputs.exists == 'false'
+        working-directory: terraform
+        run: |
+          terraform init
+          terraform apply -auto-approve -var="ecr_repo_name=${{ env.ECR_REPOSITORY }}"
+
       - name: Login to Amazon ECR
-        if: github.event_name != 'pull_request'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 

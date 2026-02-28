@@ -1,6 +1,12 @@
 name: Train Model
 
 on:
+  pull_request:
+    branches:
+      - qa
+  push:
+    branches:
+      - qa
   workflow_dispatch:
     inputs:
       model_type:
@@ -12,9 +18,6 @@ on:
           - random_forest
           - logistic_regression
           - gradient_boosting
-  schedule:
-    # Run weekly on Sundays at 00:00 UTC
-    - cron: '0 0 * * 0'
 
 jobs:
   train:

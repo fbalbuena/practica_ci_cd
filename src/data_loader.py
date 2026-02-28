@@ -1,5 +1,5 @@
 """
-Data loader module for Titanic dataset.
+Data loader module for Titanic dataset1.
 """
 import os
 import pandas as pd
@@ -21,7 +21,7 @@ def get_data_paths():
 
 def load_titanic_data(train_path=None, test_path=None):
     """
-    Load Titanic train and test datasets.
+    Load Titanic train and test datasets1.
     
     Args:
         train_path: Path to training data CSV (optional)
