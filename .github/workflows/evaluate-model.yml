@@ -62,10 +62,11 @@ jobs:
         ACCURACY=$(python -c "import json; print(json.load(open('reports/evaluation_results.json'))['metrics']['accuracy'])")
         echo "Accuracy: $ACCURACY"
         
-        if $(python -c "print($ACCURACY < 0.6)"); then
+        if (( $(echo "$ACCURACY < 0.6" | bc -l) )); then
           echo "::error::Accuracy ($ACCURACY) is below the required threshold of 0.6"
           exit 1
         fi
+
         echo "Accuracy check passed!"
     
     - name: Upload evaluation results
