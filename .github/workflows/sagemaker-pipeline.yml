@@ -1,22 +1,23 @@
-name: CD - Build and Deploy
+name: SageMaker Pipeline
 
 on:
   workflow_run:
-    workflows: ["CI - Linting and Validation"]
-    branches: [main]
+    workflows: ["Docker Build and Publish to ECR"]
+    branches: [main, branch_fa]
     types: [completed]
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: practica-ci-cd
 
 jobs:
-  deploy:
+  run-sagemaker-jobs:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -31,38 +32,7 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-        
-      - name: Set image tag variables
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Processing image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          target: processing
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:processing-latest
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:processing-${{ steps.vars.outputs.sha_short }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push Training image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          target: train
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:train-latest
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:train-${{ steps.vars.outputs.sha_short }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-            
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -70,8 +40,9 @@ jobs:
 
       - name: Install boto3 and sagemaker
         run: pip install boto3 sagemaker
-        
+
       - name: Launch SageMaker Processing Job
+        id: processing
         run: |
           python scripts/launch_processing_job.py \
             --image ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:processing-latest \
@@ -81,6 +52,7 @@ jobs:
             --instance-type ml.t3.medium
             
       - name: Launch SageMaker Training Job 
+        id: training
         run: |
           python scripts/launch_training_job.py \
             --image ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:train-latest \
@@ -88,3 +60,13 @@ jobs:
             --input-s3 s3://${{ secrets.S3_BUCKET_NAME }}/data/processed/ \
             --output-s3 s3://${{ secrets.S3_BUCKET_NAME }}/models/ \
             --instance-type ml.m5.large
+
+      - name: Create summary
+        if: always()
+        run: |
+          echo "## SageMaker Pipeline 🔬" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Image | Instance |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Processing | \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:processing-latest\` | \`ml.t3.medium\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Training | \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:train-latest\` | \`ml.m5.large\` |" >> $GITHUB_STEP_SUMMARY
