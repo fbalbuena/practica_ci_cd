@@ -3,7 +3,7 @@ name: CD - Build and Deploy
 on:
   workflow_run:
     workflows: ["CI - Linting and Validation"]
-    branches: [main, branch_fa]
+    branches: [main]
     types: [completed]
 
 env:

@@ -2,9 +2,9 @@ name: CI - Linting and Validation
 
 on:
   push:
-    branches: [ main, develop, branch_fa ]
+    branches: [ main, develop, branch_fa]
   pull_request:
-    branches: [ main, develop, branch_fa ]
+    branches: [ main, develop, branch_fa]
 
 jobs:
   validate:
